@@ -1,4 +1,4 @@
-<!-- Seated v6 -->
+<!-- Seated v7 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -337,6 +337,19 @@ function updateNearbyPanel(){
       map
     });
     polylines.push(line);
+
+    // Distance label at midpoint of line
+    const midLat=(userLatLng.lat+r.geometry.location.lat())/2;
+    const midLng=(userLatLng.lng+r.geometry.location.lng())/2;
+    const labelSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="60" height="22"><rect x="0" y="0" width="60" height="22" rx="11" fill="rgba(24,26,22,0.88)" stroke="#f4c97a" stroke-width="1.5"/><text x="30" y="15" text-anchor="middle" font-size="11" font-family="DM Sans,sans-serif" fill="#f4c97a" font-weight="500">${formatDist(r._dist)}</text></svg>`;
+    const labelMarker=new google.maps.Marker({
+      position:{lat:midLat,lng:midLng},
+      map,
+      icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(labelSvg),scaledSize:new google.maps.Size(60,22),anchor:new google.maps.Point(30,11)},
+      zIndex:300,
+      clickable:false
+    });
+    polylines.push(labelMarker);
 
     // Upgrade to large gold-ring pin
     const m=markerMap[r.place_id];
