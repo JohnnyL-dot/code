@@ -1,4 +1,4 @@
-<!-- Seated v4 -->
+<!-- Seated v5 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -147,7 +147,7 @@ const PLATFORMS = [
   { name:'Resy',        emoji:'🟣', url:'https://resy.com/?query={name}' },
 ];
 
-let map, service, userLatLng, allResults = [], markers = [];
+let map, service, userLatLng, allResults = [], markers = [], polylines = [];
 
 // PWA
 let deferredPrompt = null;
@@ -285,9 +285,17 @@ function enrichNext(places, i) {
 }
 
 // Markers
-function clearMarkers() { markers.forEach(m => m.setMap(null)); markers = []; }
-function svgPin(color) {
-  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38"><circle cx="19" cy="19" r="15" fill="${color}" stroke="#0f110e" stroke-width="2"/><text x="19" y="24" text-anchor="middle" font-size="13">🍽</text></svg>`;
+function clearMarkers() {
+  markers.forEach(m => m.setMap(null)); markers = [];
+  polylines.forEach(p => p.setMap(null)); polylines = [];
+}
+function svgPin(color, large) {
+  const size = large ? 48 : 38;
+  const r = large ? 19 : 15;
+  const cx = size / 2, cy = size / 2;
+  const fs = large ? 16 : 13;
+  const stroke = large ? 3 : 2;
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="#0f110e" stroke-width="${stroke}"/>${large ? `<circle cx="${cx}" cy="${cy}" r="${r+4}" fill="none" stroke="#f4c97a" stroke-width="2" opacity="0.7"/>` : ''}<text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="${fs}">🍽</text></svg>`;
   return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(s);
 }
 
@@ -312,14 +320,40 @@ function renderMarkers() {
   setStatus(`${filtered.length} restauranger hittade · ${openCount} öppna nu`);
 }
 
-// Nearby panel
+// Nearby panel + lines + highlighted pins
 function updateNearbyPanel() {
+  // Clear old lines
+  polylines.forEach(p => p.setMap(null)); polylines = [];
+
   const openNearby = allResults
     .filter(r => r.opening_hours && r.opening_hours.open_now)
     .sort((a,b) => a._dist - b._dist)
     .slice(0, 3);
+
   const panel = document.getElementById('nearby-panel');
   if (openNearby.length === 0) { panel.classList.remove('show'); return; }
+
+  // Draw dashed line from user to each of the 3 nearest + upgrade their pin
+  openNearby.forEach(r => {
+    // Line
+    const line = new google.maps.Polyline({
+      path: [userLatLng, { lat: r.geometry.location.lat(), lng: r.geometry.location.lng() }],
+      geodesic: true,
+      strokeColor: '#f4c97a',
+      strokeOpacity: 0,
+      icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.8, scale: 3 }, offset: '0', repeat: '12px' }],
+      map
+    });
+    polylines.push(line);
+
+    // Upgrade marker to large gold-ringed pin
+    const m = markers.find(mk => mk.getTitle() === r.name);
+    if (m) {
+      m.setIcon({ url: svgPin('#3a7d44', true), scaledSize: new google.maps.Size(48, 48), anchor: new google.maps.Point(24, 24) });
+      m.setZIndex(200);
+    }
+  });
+
   document.getElementById('nearby-list').innerHTML = openNearby.map(r => `
     <div class="nearby-item" onclick="fetchDetails('${r.place_id}', ${r._dist})">
       <div class="nearby-dot"></div>
