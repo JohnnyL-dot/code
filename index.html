@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Seated</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f110e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Seated">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f110e;
+    --surface: #181a16;
+    --surface2: #21241e;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0ede6;
+    --muted: #8a8f84;
+    --accent: #b5e48c;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+  #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+
+  /* Safe area for notch/status bar */
+  header { padding: env(safe-area-inset-top, 16px) 20px 12px; padding-top: max(env(safe-area-inset-top), 16px); background: var(--bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--accent); letter-spacing: -0.5px; }
+  .logo span { color: var(--text); }
+  #locate-btn { background: var(--accent); border: none; color: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 30px; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
+  #locate-btn:active { opacity: 0.8; }
+
+  .filters { padding: 10px 16px; display: flex; gap: 8px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .filter-pill { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 30px; padding: 6px 14px; font-size: 13px; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+  .filter-pill select { background: none; border: none; color: var(--text); font-family: inherit; font-size: 13px; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; padding: 0; }
+
+  #map { flex: 1; min-height: 0; }
+  #gmap { width: 100%; height: 100%; }
+
+  #status-bar { padding: 8px 20px; padding-bottom: max(env(safe-area-inset-bottom), 8px); background: var(--bg); border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); text-align: center; flex-shrink: 0; }
+
+  /* Bottom sheet */
+  #sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); z-index: 100; max-height: 78vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: max(env(safe-area-inset-bottom), 16px); }
+  #sheet.open { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+  .sheet-content { padding: 16px 20px 20px; }
+  .sheet-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+  .sheet-name { font-family: 'DM Serif Display', serif; font-size: 21px; line-height: 1.2; flex: 1; padding-right: 10px; }
+  .sheet-close { background: var(--surface2); border: none; color: var(--muted); width: 30px; height: 30px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .sheet-meta { font-size: 13px; color: var(--muted); margin-bottom: 10px; line-height: 1.6; }
+  .sheet-rating { color: #f4c97a; }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 20px; margin-bottom: 14px; }
+  .status-badge.open { background: rgba(58,125,68,0.2); color: #7ecb89; }
+  .status-badge.closed { background: rgba(139,46,46,0.2); color: #f07878; }
+  .status-badge.unknown { background: rgba(138,143,132,0.2); color: var(--muted); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .open .status-dot { background: #7ecb89; }
+  .closed .status-dot { background: #f07878; }
+  .unknown .status-dot { background: var(--muted); }
+  .book-section h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
+  .book-btns { display: flex; flex-direction: column; gap: 8px; }
+  .book-btn { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; text-decoration: none; transition: background 0.15s; }
+  .book-btn:active { background: #2c3028; }
+  .book-btn .arrow { color: var(--accent); }
+  .gmaps-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding: 11px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; text-decoration: none; }
+
+  /* Install banner */
+  #install-banner { display: none; position: fixed; bottom: 60px; left: 16px; right: 16px; background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 14px 16px; z-index: 200; flex-direction: row; align-items: center; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+  #install-banner.show { display: flex; }
+  .install-text { flex: 1; font-size: 13px; color: var(--text); line-height: 1.4; }
+  .install-text strong { color: var(--accent); display: block; margin-bottom: 2px; }
+  .install-btn { background: var(--accent); border: none; color: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+  .install-dismiss { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+
+  /* Loading */
+  #loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 300; transition: opacity 0.4s; }
+  #loading.hide { opacity: 0; pointer-events: none; }
+  .spinner { width: 34px; height: 34px; border: 2.5px solid var(--surface2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent); }
+  #loading-msg { font-size: 13px; color: var(--muted); }
+
+  #toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-10px); background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 13px; padding: 8px 16px; border-radius: 30px; opacity: 0; transition: all 0.3s; z-index: 400; white-space: nowrap; pointer-events: none; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (min-width: 480px) {
+    #sheet { max-width: 480px; left: 50%; right: auto; width: 100%; transform: translateX(-50%) translateY(100%); }
+    #sheet.open { transform: translateX(-50%) translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Seated</div>
+  <div id="loading-msg">Laddar karta…</div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="logo">Seat<span>ed</span></div>
+    <button id="locate-btn">📍 Min position</button>
+  </header>
+
+  <div class="filters">
+    <div class="filter-pill">
+      <select id="status-select" onchange="renderMarkers()">
+        <option value="all">Alla restauranger</option>
+        <option value="open">Öppna nu</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="map"><div id="gmap"></div></div>
+  <div id="status-bar">Tryck på "Min position" för att söka</div>
+</div>
+
+<div id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content" id="sheet-content"></div>
+</div>
+
+<div id="install-banner">
+  <div class="install-text">
+    <strong>Lägg till på hemskärmen</strong>
+    Använd Seated som en riktig app
+  </div>
+  <button class="install-btn" id="install-btn">Installera</button>
+  <button class="install-dismiss" id="install-dismiss">×</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API_KEY = 'AIzaSyAYIGLRT3QZW6mg80I9E8cESMw-mtMH79s';
+
+const PLATFORMS = [
+  { name:'OpenTable',   emoji:'🟠', url:'https://www.opentable.com/s/?restaurantName={name}' },
+  { name:'TheFork',     emoji:'🟢', url:'https://www.thefork.com/search#query={name}' },
+  { name:'Bookatable',  emoji:'🔵', url:'https://www.bookatable.com/search?q={name}' },
+  { name:'Resy',        emoji:'🟣', url:'https://resy.com/?query={name}' },
+];
+
+let map, service, userLatLng, allResults = [], markers = [];
+
+// ── PWA install prompt ──
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+document.getElementById('install-dismiss').addEventListener('click', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── Haversine ──
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function formatDist(m) {
+  return m < 1000 ? Math.round(m) + ' m' : (m / 1000).toFixed(1) + ' km';
+}
+
+// ── Load Google Maps ──
+function loadGoogleMaps() {
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=onMapsReady`;
+  s.async = true;
+  s.defer = true;
+  s.onerror = () => showToast('Kunde inte ladda Google Maps');
+  document.head.appendChild(s);
+}
+
+function onMapsReady() {
+  map = new google.maps.Map(document.getElementById('gmap'), {
+    zoom: 15,
+    center: { lat: 62.3908, lng: 17.3069 },
+    disableDefaultUI: true,
+    zoomControl: true,
+    gestureHandling: 'greedy',
+    styles: [
+      { elementType: 'geometry', stylers: [{ color: '#1a1c18' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#8a8f84' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#0f110e' }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a2e26' }] },
+      { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#333830' }] },
+      { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#5a5f54' }] },
+      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#121410' }] },
+      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+      { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#181a16' }] },
+    ]
+  });
+  service = new google.maps.places.PlacesService(map);
+  map.addListener('click', closeSheet);
+  document.getElementById('loading').classList.add('hide');
+  setStatus('Tryck på "Min position" för att söka');
+}
+
+// ── Geolocation ──
+document.getElementById('locate-btn').addEventListener('click', startLocate);
+
+function startLocate() {
+  document.getElementById('loading').classList.remove('hide');
+  setMsg('Hämtar din position…');
+  if (!navigator.geolocation) { useFallback(); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      userLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      map.setCenter(userLatLng);
+      map.setZoom(15);
+      placeUserPin();
+      searchNearby();
+    },
+    () => { useFallback(); }
+  );
+}
+
+function useFallback() {
+  userLatLng = { lat: 62.3908, lng: 17.3069 };
+  map.setCenter(userLatLng);
+  placeUserPin();
+  showToast('Position ej tillgänglig — visar Sundsvall');
+  searchNearby();
+}
+
+function placeUserPin() {
+  new google.maps.Marker({
+    position: userLatLng, map,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#5b9cf6', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2.5 },
+    title: 'Du är här', zIndex: 999
+  });
+}
+
+// ── Search ──
+function searchNearby() {
+  allResults = [];
+  clearMarkers();
+  setMsg('Söker restauranger…');
+  service.nearbySearch({
+    location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng),
+    radius: 5000,
+    type: 'restaurant'
+  }, handlePage);
+}
+
+function handlePage(results, status, pagination) {
+  if (status === google.maps.places.PlacesServiceStatus.OK) {
+    allResults = allResults.concat(results);
+    if (pagination && pagination.hasNextPage && allResults.length < 60) {
+      setTimeout(() => pagination.nextPage(), 400);
+    } else {
+      document.getElementById('loading').classList.add('hide');
+      renderMarkers();
+    }
+  } else {
+    document.getElementById('loading').classList.add('hide');
+    setStatus('Inga restauranger hittades.');
+  }
+}
+
+// ── Markers ──
+function clearMarkers() { markers.forEach(m => m.setMap(null)); markers = []; }
+
+function svgPin(color) {
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38">
+    <circle cx="19" cy="19" r="15" fill="${color}" stroke="#0f110e" stroke-width="2"/>
+    <text x="19" y="24" text-anchor="middle" font-size="13">🍽</text>
+  </svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(s);
+}
+
+function renderMarkers() {
+  clearMarkers();
+  closeSheet();
+  const onlyOpen = document.getElementById('status-select').value === 'open';
+
+  const filtered = allResults.filter(r => {
+    r._dist = haversine(userLatLng.lat, userLatLng.lng, r.geometry.location.lat(), r.geometry.location.lng());
+    if (onlyOpen) return r.opening_hours && r.opening_hours.open_now;
+    return true;
+  });
+
+  filtered.forEach(place => {
+    const isOpen = place.opening_hours ? place.opening_hours.open_now : null;
+    const color = isOpen === true ? '#3a7d44' : isOpen === false ? '#7a2e2e' : '#3a3d38';
+    const m = new google.maps.Marker({
+      position: place.geometry.location, map, title: place.name,
+      icon: { url: svgPin(color), scaledSize: new google.maps.Size(38, 38), anchor: new google.maps.Point(19, 19) }
+    });
+    m.addListener('click', () => fetchDetails(place.place_id, place._dist));
+    markers.push(m);
+  });
+
+  const openCount = filtered.filter(r => r.opening_hours && r.opening_hours.open_now).length;
+  setStatus(`${filtered.length} restauranger hittade · ${openCount} öppna nu`);
+}
+
+// ── Details & sheet ──
+function fetchDetails(placeId, dist) {
+  service.getDetails({
+    placeId,
+    fields: ['name','rating','user_ratings_total','formatted_address','opening_hours','url','price_level']
+  }, (place, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK) openSheet(place, dist);
+  });
+}
+
+function openSheet(place, dist) {
+  const isOpen = place.opening_hours ? place.opening_hours.open_now : null;
+  const sc = isOpen === true ? 'open' : isOpen === false ? 'closed' : 'unknown';
+  const sl = isOpen === true ? 'Öppen nu' : isOpen === false ? 'Stängd just nu' : 'Okänd öppettid';
+  const rating = place.rating ? `<span class="sheet-rating">★ ${place.rating}</span> (${place.user_ratings_total || '?'}) · ` : '';
+  const price = place.price_level ? '💰'.repeat(place.price_level) + ' · ' : '';
+  const distStr = dist !== undefined ? `📍 ${formatDist(dist)} bort · ` : '';
+  const encodedName = encodeURIComponent(place.name);
+  const btns = PLATFORMS.map(p =>
+    `<a class="book-btn" href="${p.url.replace('{name}', encodedName)}" target="_blank" rel="noopener">
+      <span>${p.emoji}&nbsp;${p.name}</span><span class="arrow">→</span>
+    </a>`).join('');
+
+  document.getElementById('sheet-content').innerHTML = `
+    <div class="sheet-header">
+      <div class="sheet-name">${place.name}</div>
+      <button class="sheet-close" onclick="closeSheet()">×</button>
+    </div>
+    <div class="sheet-meta">${distStr}${rating}${price}${place.formatted_address || ''}</div>
+    <div class="status-badge ${sc}"><div class="status-dot"></div>${sl}</div>
+    <div class="book-section"><h4>Boka via</h4><div class="book-btns">${btns}</div></div>
+    <a class="gmaps-btn" href="${place.url || 'https://maps.google.com/?q='+encodedName}" target="_blank" rel="noopener">🗺 Öppna i Google Maps</a>
+  `;
+  document.getElementById('sheet').classList.add('open');
+}
+
+function closeSheet() { document.getElementById('sheet').classList.remove('open'); }
+
+const sheet = document.getElementById('sheet');
+let touchStartY = 0;
+sheet.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+sheet.addEventListener('touchend', e => { if (e.changedTouches[0].clientY - touchStartY > 60) closeSheet(); }, { passive: true });
+
+function setStatus(t) { document.getElementById('status-bar').textContent = t; }
+function setMsg(t) { document.getElementById('loading-msg').textContent = t; }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+loadGoogleMaps();
+</script>
+</body>
+</html>
