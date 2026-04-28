@@ -292,7 +292,6 @@ function searchNearby() {
 
 function handlePage(results, status, pagination) {
   if (status === google.maps.places.PlacesServiceStatus.OK) {
-    // Calculate distance for each result immediately
     results.forEach(r => {
       r._dist = haversine(userLatLng.lat, userLatLng.lng, r.geometry.location.lat(), r.geometry.location.lng());
     });
@@ -300,7 +299,10 @@ function handlePage(results, status, pagination) {
     if (pagination && pagination.hasNextPage && allResults.length < 60) {
       setTimeout(() => pagination.nextPage(), 400);
     } else {
-      // Sort by distance, fetch details for nearest 20 to get opening_hours
+      // Render all markers immediately
+      document.getElementById('loading').classList.add('hide');
+      renderMarkers();
+      // Then fetch opening_hours for nearest 20 to populate panel + filter
       allResults.sort((a, b) => a._dist - b._dist);
       fetchOpeningHours(allResults.slice(0, 20), 0);
     }
@@ -312,7 +314,7 @@ function handlePage(results, status, pagination) {
 
 function fetchOpeningHours(places, index) {
   if (index >= places.length) {
-    document.getElementById('loading').classList.add('hide');
+    // Re-render markers now that we have opening_hours
     renderMarkers();
     return;
   }
