@@ -41,8 +41,19 @@
   .filter-pill { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 30px; padding: 6px 14px; font-size: 13px; color: var(--text); white-space: nowrap; flex-shrink: 0; }
   .filter-pill select { background: none; border: none; color: var(--text); font-family: inherit; font-size: 13px; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; padding: 0; }
 
+  /* Nearby open panel */
+  #nearby-panel { position: fixed; top: 130px; left: 12px; z-index: 50; width: 190px; background: rgba(24,26,22,0.93); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: none; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  #nearby-panel.show { display: block; }
+  .nearby-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+  .nearby-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
+  .nearby-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .nearby-item:active { opacity: 0.7; }
+  .nearby-dot { width: 8px; height: 8px; border-radius: 50%; background: #7ecb89; flex-shrink: 0; }
+  .nearby-info { flex: 1; min-width: 0; }
+  .nearby-name { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nearby-dist { font-size: 11px; color: var(--muted); }
+
   #map { flex: 1; min-height: 0; }
-  #gmap { width: 100%; height: 100%; }
 
   #status-bar { padding: 8px 20px; padding-bottom: max(env(safe-area-inset-bottom), 8px); background: var(--bg); border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); text-align: center; flex-shrink: 0; }
 
@@ -119,7 +130,14 @@
     </div>
   </div>
 
-  <div id="map"><div id="gmap"></div></div>
+  <div id="map">
+    <div id="gmap"></div>
+  </div>
+
+  <div id="nearby-panel">
+    <div class="nearby-title">🟢 Närmaste öppna</div>
+    <div id="nearby-list"></div>
+  </div>
   <div id="status-bar">Tryck på "Min position" för att söka</div>
 </div>
 
@@ -322,6 +340,32 @@ function renderMarkers() {
 
   const openCount = filtered.filter(r => r.opening_hours && r.opening_hours.open_now).length;
   setStatus(`${filtered.length} restauranger hittade · ${openCount} öppna nu`);
+  updateNearbyPanel();
+}
+
+// ── Nearby open panel ──
+function updateNearbyPanel() {
+  const panel = document.getElementById('nearby-panel');
+  const list = document.getElementById('nearby-list');
+
+  const openNearby = allResults
+    .filter(r => r.opening_hours && r.opening_hours.open_now && r._dist !== undefined)
+    .sort((a, b) => a._dist - b._dist)
+    .slice(0, 3);
+
+  if (openNearby.length === 0) { panel.classList.remove('show'); return; }
+
+  list.innerHTML = openNearby.map(r => `
+    <div class="nearby-item" onclick="fetchDetails('${r.place_id}', ${r._dist})">
+      <div class="nearby-dot"></div>
+      <div class="nearby-info">
+        <div class="nearby-name">${r.name}</div>
+        <div class="nearby-dist">${formatDist(r._dist)} bort</div>
+      </div>
+    </div>
+  `).join('');
+
+  panel.classList.add('show');
 }
 
 // ── Details & sheet ──
