@@ -299,12 +299,12 @@ function handlePage(results, status, pagination) {
     if (pagination && pagination.hasNextPage && allResults.length < 60) {
       setTimeout(() => pagination.nextPage(), 400);
     } else {
-      // Render all markers immediately
       document.getElementById('loading').classList.add('hide');
+      // Render all markers immediately — no opening_hours yet, all grey
       renderMarkers();
-      // Then fetch opening_hours for nearest 20 to populate panel + filter
-      allResults.sort((a, b) => a._dist - b._dist);
-      fetchOpeningHours(allResults.slice(0, 20), 0);
+      // Then quietly fetch opening_hours for nearest 20 in background
+      const nearest = [...allResults].sort((a, b) => a._dist - b._dist).slice(0, 20);
+      fetchOpeningHours(nearest, 0);
     }
   } else {
     document.getElementById('loading').classList.add('hide');
@@ -314,11 +314,11 @@ function handlePage(results, status, pagination) {
 
 function fetchOpeningHours(places, index) {
   if (index >= places.length) {
-    // Re-render markers now that we have opening_hours
-    renderMarkers();
+    // All done — just update pin colors and nearby panel, don't touch map structure
+    updatePinColors();
+    updateNearbyPanel();
     return;
   }
-  setMsg(`Hämtar öppettider ${index + 1}/${places.length}…`);
   service.getDetails({
     placeId: places[index].place_id,
     fields: ['opening_hours']
@@ -328,6 +328,19 @@ function fetchOpeningHours(places, index) {
     }
     setTimeout(() => fetchOpeningHours(places, index + 1), 100);
   });
+}
+
+function updatePinColors() {
+  // Update marker icons based on now-known opening_hours, without re-rendering everything
+  markers.forEach((m, i) => {
+    const place = allResults.find(r => r.name === m.getTitle());
+    if (!place) return;
+    const isOpen = place.opening_hours ? place.opening_hours.open_now : null;
+    const color = isOpen === true ? '#3a7d44' : isOpen === false ? '#7a2e2e' : '#3a3d38';
+    m.setIcon({ url: svgPin(color), scaledSize: new google.maps.Size(38, 38), anchor: new google.maps.Point(19, 19) });
+  });
+  const openCount = allResults.filter(r => r.opening_hours && r.opening_hours.open_now).length;
+  setStatus(`${allResults.length} restauranger hittade · ${openCount} öppna nu`);
 }
 
 // ── Markers ──
