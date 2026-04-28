@@ -292,17 +292,40 @@ function searchNearby() {
 
 function handlePage(results, status, pagination) {
   if (status === google.maps.places.PlacesServiceStatus.OK) {
+    // Calculate distance for each result immediately
+    results.forEach(r => {
+      r._dist = haversine(userLatLng.lat, userLatLng.lng, r.geometry.location.lat(), r.geometry.location.lng());
+    });
     allResults = allResults.concat(results);
     if (pagination && pagination.hasNextPage && allResults.length < 60) {
       setTimeout(() => pagination.nextPage(), 400);
     } else {
-      document.getElementById('loading').classList.add('hide');
-      renderMarkers();
+      // Sort by distance, fetch details for nearest 20 to get opening_hours
+      allResults.sort((a, b) => a._dist - b._dist);
+      fetchOpeningHours(allResults.slice(0, 20), 0);
     }
   } else {
     document.getElementById('loading').classList.add('hide');
     setStatus('Inga restauranger hittades.');
   }
+}
+
+function fetchOpeningHours(places, index) {
+  if (index >= places.length) {
+    document.getElementById('loading').classList.add('hide');
+    renderMarkers();
+    return;
+  }
+  setMsg(`Hämtar öppettider ${index + 1}/${places.length}…`);
+  service.getDetails({
+    placeId: places[index].place_id,
+    fields: ['opening_hours']
+  }, (detail, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK && detail.opening_hours) {
+      places[index].opening_hours = detail.opening_hours;
+    }
+    setTimeout(() => fetchOpeningHours(places, index + 1), 100);
+  });
 }
 
 // ── Markers ──
