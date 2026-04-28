@@ -2,7 +2,8 @@
   "name": "Seated — Hitta lediga bord",
   "short_name": "Seated",
   "description": "Hitta restauranger med lediga bord nära dig",
-  "start_url": "/",
+  "start_url": "/code/",
+  "scope": "/code/",
   "display": "standalone",
   "background_color": "#0f110e",
   "theme_color": "#0f110e",
@@ -21,6 +22,10 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["food", "lifestyle", "navigation"],
+  "categories": [
+    "food",
+    "lifestyle",
+    "navigation"
+  ],
   "lang": "sv"
 }
