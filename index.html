@@ -1,4 +1,4 @@
-<!-- Seated v7 -->
+<!-- Seated v8 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -14,11 +14,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:#0f110e;--surface:#181a16;--surface2:#21241e;
-    --border:rgba(255,255,255,0.08);--text:#f0ede6;
-    --muted:#8a8f84;--accent:#b5e48c;--radius-sm:8px;
-  }
+  :root{--bg:#0f110e;--surface:#181a16;--surface2:#21241e;--border:rgba(255,255,255,0.08);--text:#f0ede6;--muted:#8a8f84;--accent:#b5e48c;--radius-sm:8px}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
   #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
@@ -32,7 +28,6 @@
   #map{flex:1;min-height:0}
   #gmap{width:100%;height:100%}
   #status-bar{padding:8px 20px;padding-bottom:max(env(safe-area-inset-bottom),8px);background:var(--bg);border-top:1px solid var(--border);font-size:12px;color:var(--muted);text-align:center;flex-shrink:0}
-
   #nearby-panel{position:fixed;top:130px;left:12px;z-index:50;width:190px;background:rgba(24,26,22,0.93);border:1px solid var(--border);border-radius:14px;padding:10px 12px;backdrop-filter:blur(8px);display:none;box-shadow:0 4px 16px rgba(0,0,0,0.4)}
   #nearby-panel.show{display:block}
   .nearby-title{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px}
@@ -43,7 +38,6 @@
   .nearby-info{flex:1;min-width:0}
   .nearby-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .nearby-dist{font-size:11px;color:var(--muted)}
-
   #sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;border-top:1px solid var(--border);transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);z-index:100;max-height:78vh;overflow-y:auto;padding-bottom:max(env(safe-area-inset-bottom),16px)}
   #sheet.open{transform:translateY(0)}
   .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
@@ -67,14 +61,12 @@
   .book-btn:active{background:#2c3028}
   .book-btn .arrow{color:var(--accent)}
   .gmaps-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:11px;border-radius:var(--radius-sm);border:1px solid var(--border);background:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;text-decoration:none}
-
   #install-banner{display:none;position:fixed;bottom:60px;left:16px;right:16px;background:var(--surface);border:1px solid var(--accent);border-radius:14px;padding:14px 16px;z-index:200;flex-direction:row;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
   #install-banner.show{display:flex}
   .install-text{flex:1;font-size:13px;color:var(--text);line-height:1.4}
   .install-text strong{color:var(--accent);display:block;margin-bottom:2px}
   .install-btn{background:var(--accent);border:none;color:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:8px 14px;border-radius:20px;cursor:pointer}
   .install-dismiss{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px}
-
   #loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:300;transition:opacity 0.4s}
   #loading.hide{opacity:0;pointer-events:none}
   .spinner{width:34px;height:34px;border:2.5px solid var(--surface2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
@@ -137,8 +129,8 @@ const PLATFORMS = [
 
 let map, service, userLatLng;
 let allResults = [];
-let markerMap = {};   // place_id -> google.maps.Marker
-let polylines = [];
+let markerMap = {};
+let overlays = []; // lines + label markers
 
 // PWA
 let deferredPrompt = null;
@@ -171,11 +163,16 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),3200);
 }
 
-// SVG pins — large=true for top-3 (bigger, gold ring)
-function svgPin(color, large){
-  const sz=large?50:38, r=large?18:14, cx=sz/2, cy=sz/2, fs=large?15:13;
-  const ring = large ? `<circle cx="${cx}" cy="${cy}" r="${r+6}" fill="none" stroke="#f4c97a" stroke-width="3" opacity="1"/>` : '';
+function svgPin(color,large){
+  const sz=large?50:38,r=large?18:14,cx=sz/2,cy=sz/2,fs=large?15:13;
+  const ring=large?`<circle cx="${cx}" cy="${cy}" r="24" fill="none" stroke="#f4c97a" stroke-width="3"/>`:'';
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}">${ring}<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="#0f110e" stroke-width="2"/><text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="${fs}">🍽</text></svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+}
+
+function svgLabel(text){
+  const w=text.length*7+20;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="22"><rect x="0" y="0" width="${w}" height="22" rx="11" fill="#181a16" stroke="#f4c97a" stroke-width="1.5"/><text x="${w/2}" y="15" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f4c97a" font-weight="600">${text}</text></svg>`;
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 }
 
@@ -261,19 +258,17 @@ function onSearchResults(results,status,pagination){
   } else {
     document.getElementById('loading').classList.add('hide');
     renderMarkers();
-    // Enrich nearest 20 for opening_hours in background
     const nearest=[...allResults].sort((a,b)=>a._dist-b._dist).slice(0,20);
     enrichNext(nearest,0);
   }
 }
 
-// Enrich opening_hours one by one
+// Enrich opening_hours
 function enrichNext(places,i){
   if(i>=places.length){updateNearbyPanel();return;}
   service.getDetails({placeId:places[i].place_id,fields:['opening_hours']},(detail,status)=>{
     if(status===google.maps.places.PlacesServiceStatus.OK&&detail&&detail.opening_hours){
       places[i].opening_hours=detail.opening_hours;
-      // Update this marker's pin color immediately
       const m=markerMap[places[i].place_id];
       if(m){
         const isOpen=detail.opening_hours.open_now;
@@ -284,16 +279,16 @@ function enrichNext(places,i){
   });
 }
 
-// Clear everything
+// Clear all markers and overlays
 function clearAll(){
-  Object.values(markerMap).forEach(m=>m.setMap(null)); markerMap={};
-  polylines.forEach(p=>p.setMap(null)); polylines=[];
+  Object.values(markerMap).forEach(m=>m.setMap(null));markerMap={};
+  overlays.forEach(o=>o.setMap(null));overlays=[];
   document.getElementById('nearby-panel').classList.remove('show');
 }
 
-// Render all markers
+// Render all restaurant markers
 function renderMarkers(){
-  clearAll(); closeSheet();
+  clearAll();closeSheet();
   const onlyOpen=document.getElementById('status-select').value==='open';
   const filtered=allResults.filter(r=>{
     if(onlyOpen) return r.opening_hours&&r.opening_hours.open_now;
@@ -313,10 +308,9 @@ function renderMarkers(){
   setStatus(`${filtered.length} restauranger hittade · ${openCount} öppna nu`);
 }
 
-// Nearby panel — called after enriching is done
+// Nearby panel with lines + labels + large pins
 function updateNearbyPanel(){
-  // Clear old lines
-  polylines.forEach(p=>p.setMap(null)); polylines=[];
+  overlays.forEach(o=>o.setMap(null));overlays=[];
 
   const top3=allResults
     .filter(r=>r.opening_hours&&r.opening_hours.open_now)
@@ -327,31 +321,40 @@ function updateNearbyPanel(){
   if(top3.length===0){panel.classList.remove('show');return;}
 
   top3.forEach(r=>{
-    // Dashed yellow line from user to restaurant
+    const rLat=r.geometry.location.lat();
+    const rLng=r.geometry.location.lng();
+
+    // Dashed line
     const line=new google.maps.Polyline({
-      path:[userLatLng,{lat:r.geometry.location.lat(),lng:r.geometry.location.lng()}],
+      path:[userLatLng,{lat:rLat,lng:rLng}],
       geodesic:true,
       strokeColor:'#f4c97a',
       strokeOpacity:0,
       icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:1,scale:3},offset:'0',repeat:'12px'}],
       map
     });
-    polylines.push(line);
+    overlays.push(line);
 
-    // Distance label at midpoint of line
-    const midLat=(userLatLng.lat+r.geometry.location.lat())/2;
-    const midLng=(userLatLng.lng+r.geometry.location.lng())/2;
-    const labelSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="60" height="22"><rect x="0" y="0" width="60" height="22" rx="11" fill="rgba(24,26,22,0.88)" stroke="#f4c97a" stroke-width="1.5"/><text x="30" y="15" text-anchor="middle" font-size="11" font-family="DM Sans,sans-serif" fill="#f4c97a" font-weight="500">${formatDist(r._dist)}</text></svg>`;
+    // Distance label at midpoint
+    const midLat=(userLatLng.lat+rLat)/2;
+    const midLng=(userLatLng.lng+rLng)/2;
+    const distText=formatDist(r._dist);
+    const labelW=distText.length*7+22;
+    const labelSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${labelW}" height="22"><rect width="${labelW}" height="22" rx="11" fill="#181a16" stroke="#f4c97a" stroke-width="1.5"/><text x="${labelW/2}" y="15" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f4c97a" font-weight="600">${distText}</text></svg>`;
     const labelMarker=new google.maps.Marker({
       position:{lat:midLat,lng:midLng},
       map,
-      icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(labelSvg),scaledSize:new google.maps.Size(60,22),anchor:new google.maps.Point(30,11)},
+      clickable:false,
       zIndex:300,
-      clickable:false
+      icon:{
+        url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(labelSvg),
+        scaledSize:new google.maps.Size(labelW,22),
+        anchor:new google.maps.Point(labelW/2,11)
+      }
     });
-    polylines.push(labelMarker);
+    overlays.push(labelMarker);
 
-    // Upgrade to large gold-ring pin
+    // Large gold-ring pin
     const m=markerMap[r.place_id];
     if(m){
       m.setIcon({url:svgPin('#3a7d44',true),scaledSize:new google.maps.Size(50,50),anchor:new google.maps.Point(25,25)});
