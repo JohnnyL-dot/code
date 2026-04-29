@@ -1,4 +1,4 @@
-<!-- Seated v8 -->
+<!-- Seated v9 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -127,10 +127,10 @@ const PLATFORMS = [
   {name:'Resy',emoji:'🟣',url:'https://resy.com/?query={name}'},
 ];
 
-let map, service, userLatLng;
+let map, service, directions, userLatLng;
 let allResults = [];
 let markerMap = {};
-let overlays = []; // lines + label markers
+let overlays = [];
 
 // PWA
 let deferredPrompt = null;
@@ -170,16 +170,10 @@ function svgPin(color,large){
   return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 }
 
-function svgLabel(text){
-  const w=text.length*7+20;
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="22"><rect x="0" y="0" width="${w}" height="22" rx="11" fill="#181a16" stroke="#f4c97a" stroke-width="1.5"/><text x="${w/2}" y="15" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f4c97a" font-weight="600">${text}</text></svg>`;
-  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
-}
-
-// Load Maps
+// Load Maps + Directions
 function loadGoogleMaps(){
   const s=document.createElement('script');
-  s.src=`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=onMapsReady`;
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places,geometry&callback=onMapsReady`;
   s.async=true;s.defer=true;document.head.appendChild(s);
 }
 
@@ -201,6 +195,7 @@ function onMapsReady(){
     ]
   });
   service=new google.maps.places.PlacesService(map);
+  directions=new google.maps.DirectionsService();
   map.addListener('click',closeSheet);
   document.getElementById('loading').classList.add('hide');
   setStatus('Tryck på "Min position" för att söka');
@@ -279,14 +274,14 @@ function enrichNext(places,i){
   });
 }
 
-// Clear all markers and overlays
+// Clear
 function clearAll(){
   Object.values(markerMap).forEach(m=>m.setMap(null));markerMap={};
   overlays.forEach(o=>o.setMap(null));overlays=[];
   document.getElementById('nearby-panel').classList.remove('show');
 }
 
-// Render all restaurant markers
+// Render markers
 function renderMarkers(){
   clearAll();closeSheet();
   const onlyOpen=document.getElementById('status-select').value==='open';
@@ -308,7 +303,73 @@ function renderMarkers(){
   setStatus(`${filtered.length} restauranger hittade · ${openCount} öppna nu`);
 }
 
-// Nearby panel with lines + labels + large pins
+// Draw walking route for one restaurant, then call next
+function drawRoutes(top3, i){
+  if(i>=top3.length) return;
+  const r=top3[i];
+  directions.route({
+    origin: userLatLng,
+    destination: {lat:r.geometry.location.lat(), lng:r.geometry.location.lng()},
+    travelMode: google.maps.TravelMode.WALKING
+  }, (result, status) => {
+    if(status === google.maps.DirectionsStatus.OK){
+      const leg = result.routes[0].legs[0];
+      const walkDist = leg.distance.text;
+      const walkTime = leg.duration.text;
+      const path = result.routes[0].overview_path;
+
+      // Draw route polyline
+      const line = new google.maps.Polyline({
+        path,
+        strokeColor:'#f4c97a',
+        strokeOpacity:0.85,
+        strokeWeight:3,
+        map
+      });
+      overlays.push(line);
+
+      // Label at midpoint of path
+      const mid = path[Math.floor(path.length/2)];
+      const labelText = walkDist + ' · ' + walkTime;
+      const labelW = labelText.length * 7 + 24;
+      const labelSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${labelW}" height="22"><rect width="${labelW}" height="22" rx="11" fill="#181a16" stroke="#f4c97a" stroke-width="1.5"/><text x="${labelW/2}" y="15" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f4c97a" font-weight="600">${labelText}</text></svg>`;
+      const labelMarker = new google.maps.Marker({
+        position: mid,
+        map,
+        clickable: false,
+        zIndex: 300,
+        icon:{
+          url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(labelSvg),
+          scaledSize:new google.maps.Size(labelW,22),
+          anchor:new google.maps.Point(labelW/2,11)
+        }
+      });
+      overlays.push(labelMarker);
+
+      // Store walking info on result for panel
+      r._walkDist = walkDist;
+      r._walkTime = walkTime;
+
+      // Refresh nearby panel text if already shown
+      refreshNearbyList(top3);
+    }
+    // Draw next route
+    setTimeout(()=>drawRoutes(top3, i+1), 200);
+  });
+}
+
+function refreshNearbyList(top3){
+  document.getElementById('nearby-list').innerHTML=top3.map(r=>`
+    <div class="nearby-item" onclick="fetchDetails('${r.place_id}',${r._dist})">
+      <div class="nearby-dot"></div>
+      <div class="nearby-info">
+        <div class="nearby-name">${r.name}</div>
+        <div class="nearby-dist">${r._walkDist ? r._walkDist+' · 🚶 '+r._walkTime : formatDist(r._dist)+' bort'}</div>
+      </div>
+    </div>`).join('');
+}
+
+// Nearby panel
 function updateNearbyPanel(){
   overlays.forEach(o=>o.setMap(null));overlays=[];
 
@@ -320,41 +381,8 @@ function updateNearbyPanel(){
   const panel=document.getElementById('nearby-panel');
   if(top3.length===0){panel.classList.remove('show');return;}
 
+  // Upgrade pins
   top3.forEach(r=>{
-    const rLat=r.geometry.location.lat();
-    const rLng=r.geometry.location.lng();
-
-    // Dashed line
-    const line=new google.maps.Polyline({
-      path:[userLatLng,{lat:rLat,lng:rLng}],
-      geodesic:true,
-      strokeColor:'#f4c97a',
-      strokeOpacity:0,
-      icons:[{icon:{path:'M 0,-1 0,1',strokeOpacity:1,scale:3},offset:'0',repeat:'12px'}],
-      map
-    });
-    overlays.push(line);
-
-    // Distance label at midpoint
-    const midLat=(userLatLng.lat+rLat)/2;
-    const midLng=(userLatLng.lng+rLng)/2;
-    const distText=formatDist(r._dist);
-    const labelW=distText.length*7+22;
-    const labelSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${labelW}" height="22"><rect width="${labelW}" height="22" rx="11" fill="#181a16" stroke="#f4c97a" stroke-width="1.5"/><text x="${labelW/2}" y="15" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#f4c97a" font-weight="600">${distText}</text></svg>`;
-    const labelMarker=new google.maps.Marker({
-      position:{lat:midLat,lng:midLng},
-      map,
-      clickable:false,
-      zIndex:300,
-      icon:{
-        url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(labelSvg),
-        scaledSize:new google.maps.Size(labelW,22),
-        anchor:new google.maps.Point(labelW/2,11)
-      }
-    });
-    overlays.push(labelMarker);
-
-    // Large gold-ring pin
     const m=markerMap[r.place_id];
     if(m){
       m.setIcon({url:svgPin('#3a7d44',true),scaledSize:new google.maps.Size(50,50),anchor:new google.maps.Point(25,25)});
@@ -362,15 +390,12 @@ function updateNearbyPanel(){
     }
   });
 
-  document.getElementById('nearby-list').innerHTML=top3.map(r=>`
-    <div class="nearby-item" onclick="fetchDetails('${r.place_id}',${r._dist})">
-      <div class="nearby-dot"></div>
-      <div class="nearby-info">
-        <div class="nearby-name">${r.name}</div>
-        <div class="nearby-dist">${formatDist(r._dist)} bort</div>
-      </div>
-    </div>`).join('');
+  // Show panel immediately with straight-line distances
+  refreshNearbyList(top3);
   panel.classList.add('show');
+
+  // Draw walking routes (updates label + panel when each arrives)
+  drawRoutes(top3, 0);
 }
 
 // Details & sheet
