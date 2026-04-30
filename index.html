@@ -1,4 +1,4 @@
-<!-- Seated v12 -->
+<!-- Seated v13 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -195,7 +195,7 @@ function loadGoogleMaps(){
 
 function onMapsReady(){
   map=new google.maps.Map(document.getElementById('gmap'),{
-    zoom:15,center:{lat:62.3908,lng:17.3069},
+    zoom:5,center:{lat:62.0,lng:15.0},
     disableDefaultUI:true,zoomControl:true,gestureHandling:'greedy',
     styles:[
       {elementType:'geometry',stylers:[{color:'#1a1c18'}]},
@@ -222,21 +222,33 @@ document.getElementById('locate-btn').addEventListener('click', startLocate);
 function startLocate(){
   document.getElementById('loading').classList.remove('hide');
   setMsg('Hämtar din position…');
-  if(!navigator.geolocation){useFallback();return;}
+  if(!navigator.geolocation){
+    document.getElementById('loading').classList.add('hide');
+    showToast('Din enhet stöder inte GPS');
+    setStatus('GPS stöds inte på den här enheten');
+    return;
+  }
   navigator.geolocation.getCurrentPosition(
     pos=>{
       userLatLng={lat:pos.coords.latitude,lng:pos.coords.longitude};
       map.setCenter(userLatLng);map.setZoom(15);
       placeUserPin();searchNearby();
     },
-    ()=>useFallback()
+    err=>{
+      document.getElementById('loading').classList.add('hide');
+      if(err.code===1){
+        showToast('Platstillstånd nekades — tillåt i inställningar');
+        setStatus('⚠️ Tillåt platsåtkomst och tryck "Min position" igen');
+      } else if(err.code===2){
+        showToast('Kunde inte hämta position — försök igen');
+        setStatus('⚠️ Position ej tillgänglig — försök igen');
+      } else {
+        showToast('Tidsgräns — försök igen');
+        setStatus('⚠️ Positionssökning tog för lång tid — försök igen');
+      }
+    },
+    {timeout:10000, enableHighAccuracy:true}
   );
-}
-function useFallback(){
-  userLatLng={lat:62.3908,lng:17.3069};
-  map.setCenter(userLatLng);placeUserPin();
-  showToast('Position ej tillgänglig — visar Sundsvall');
-  searchNearby();
 }
 function placeUserPin(){
   new google.maps.Marker({
