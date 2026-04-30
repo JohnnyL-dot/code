@@ -1,4 +1,4 @@
-<!-- Seated v13 -->
+<!-- Seated v14 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -90,7 +90,13 @@
 <div id="app">
   <header>
     <div class="logo">Seat<span>ed</span></div>
-    <button id="locate-btn">📍 Min position</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="travel-select" onchange="redrawRoutes()" style="background:var(--surface2);border:1px solid var(--border);border-radius:30px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;cursor:pointer;appearance:none;">
+        <option value="WALKING">🚶 Gång</option>
+        <option value="DRIVING">🚗 Bil</option>
+      </select>
+      <button id="locate-btn">📍 Min position</button>
+    </div>
   </header>
   <div class="filters">
     <div class="filter-pill">
@@ -99,11 +105,8 @@
         <option value="open">Öppna nu</option>
       </select>
     </div>
-    <div class="filter-pill">
-      <select id="travel-select" onchange="redrawRoutes()">
-        <option value="WALKING">🚶 Gång</option>
-        <option value="DRIVING">🚗 Bil</option>
-      </select>
+    <div class="filter-pill" style="cursor:pointer" onclick="clearCache()">
+      🔄 Uppdatera app
     </div>
   </div>
   <div id="map"><div id="gmap"></div></div>
@@ -484,6 +487,18 @@ const sheet=document.getElementById('sheet');
 let ty=0;
 sheet.addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
 sheet.addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-ty>60)closeSheet();},{passive:true});
+
+// Clear service worker cache and reload
+function clearCache(){
+  if('serviceWorker' in navigator && 'caches' in window){
+    caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>{
+      showToast('Cache rensad — laddar om…');
+      setTimeout(()=>window.location.reload(true),1000);
+    });
+  } else {
+    window.location.reload(true);
+  }
+}
 
 loadGoogleMaps();
 </script>
