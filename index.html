@@ -1,4 +1,4 @@
-<!-- Seated v11 -->
+<!-- Seated v12 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -406,7 +406,17 @@ function drawOneRoute(i){
       };
       if(isWalking){
         polyOpts.strokeOpacity=0;
-        polyOpts.icons=[{icon:{path:'M 0,-1 0,1',strokeOpacity:1,scale:3},offset:'0',repeat:'12px'}];
+        polyOpts.icons=[{
+          icon:{
+            path:'M 0,0 0,1',
+            strokeOpacity:1,
+            strokeColor:routeColor,
+            strokeWeight:3,
+            scale:8
+          },
+          offset:'0%',
+          repeat:'20px'
+        }];
       } else {
         polyOpts.strokeOpacity=0.85;
       }
