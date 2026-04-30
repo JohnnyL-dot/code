@@ -1,4 +1,4 @@
-const CACHE = 'seated-v1';
+const CACHE = 'seated-v13';
 const ASSETS = [
   '/',
   '/index.html',
