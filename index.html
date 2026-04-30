@@ -1,4 +1,4 @@
-<!-- Seated v14 -->
+<!-- Seated v15 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -215,6 +215,9 @@ function onMapsReady(){
   });
   placesService = new google.maps.places.PlacesService(map);
   directionsService = new google.maps.DirectionsService();
+  document.getElementById('travel-select').addEventListener('change', function(){
+    updateMapToggle(this.value);
+  });
   map.addListener('click', closeSheet);
   document.getElementById('loading').classList.add('hide');
   setStatus('Tryck på "Min position" för att söka');
@@ -258,6 +261,37 @@ function placeUserPin(){
     position:userLatLng,map,
     icon:{path:google.maps.SymbolPath.CIRCLE,scale:9,fillColor:'#5b9cf6',fillOpacity:1,strokeColor:'#fff',strokeWeight:2.5},
     title:'Du är här',zIndex:999
+  });
+
+  // Travel mode toggle on map next to user position
+  const div=document.createElement('div');
+  div.style.cssText='position:absolute;background:rgba(24,26,22,0.93);border:1px solid rgba(255,255,255,0.08);border-radius:30px;padding:5px 5px;display:flex;gap:4px;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,0.4)';
+  div.id='map-travel-toggle';
+
+  ['🚶','🚗'].forEach((icon,i)=>{
+    const mode=i===0?'WALKING':'DRIVING';
+    const btn=document.createElement('button');
+    btn.textContent=icon;
+    btn.dataset.mode=mode;
+    btn.style.cssText='background:none;border:none;font-size:18px;width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s';
+    btn.addEventListener('click',()=>{
+      document.getElementById('travel-select').value=mode;
+      updateMapToggle(mode);
+      redrawRoutes();
+    });
+    div.appendChild(btn);
+  });
+
+  updateMapToggle(document.getElementById('travel-select').value, div);
+  map.controls[google.maps.ControlPosition.LEFT_CENTER].push(div);
+}
+
+function updateMapToggle(activeMode, container){
+  const div=container||document.getElementById('map-travel-toggle');
+  if(!div) return;
+  div.querySelectorAll('button').forEach(btn=>{
+    btn.style.background=btn.dataset.mode===activeMode?'#b5e48c':'none';
+    btn.style.color=btn.dataset.mode===activeMode?'#0f110e':'#f0ede6';
   });
 }
 
