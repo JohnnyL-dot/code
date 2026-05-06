@@ -141,6 +141,8 @@ let allResults = [];
 let markerMap = {};
 let overlays = [];
 let currentTop3 = [];
+let top3Walking = [];   // cached walking top 3
+let top3Driving = [];   // cached driving top 3 (populated on first switch to DRIVING)
 
 // PWA
 let deferredPrompt = null;
@@ -316,6 +318,8 @@ function clearAll(){
   Object.values(markerMap).forEach(m=>m.setMap(null));markerMap={};
   clearOverlays();
   currentTop3=[];
+  top3Walking=[];
+  top3Driving=[];
   document.getElementById('nearby-panel').classList.remove('show');
 }
 
@@ -341,17 +345,35 @@ function renderMarkers(){
   setStatus(`${filtered.length} restauranger hittade · ${openCount} öppna nu`);
 }
 
-// Build nearby panel — called once after enriching
+// Build nearby panel — called once after enriching (walking mode by default)
 function buildNearbyPanel(){
-  currentTop3=allResults
+  top3Walking = allResults
     .filter(r=>r.opening_hours&&r.opening_hours.open_now)
     .sort((a,b)=>a._dist-b._dist)
     .slice(0,3);
 
   const panel=document.getElementById('nearby-panel');
-  if(currentTop3.length===0){panel.classList.remove('show');return;}
+  if(top3Walking.length===0){panel.classList.remove('show');return;}
 
-  // Upgrade pins to large gold-ring
+  applyTop3(top3Walking);
+  panel.classList.add('show');
+  drawRoutes();
+}
+
+// Set currentTop3 and update marker styles
+function applyTop3(top3){
+  // Reset all open markers to normal size
+  allResults.forEach(r=>{
+    const m=markerMap[r.place_id];
+    if(m){
+      const isOpen=r.opening_hours?r.opening_hours.open_now:null;
+      const color=isOpen===true?'#3a7d44':isOpen===false?'#7a2e2e':'#3a3d38';
+      m.setIcon({url:svgPin(color,false),scaledSize:new google.maps.Size(38,38),anchor:new google.maps.Point(19,19)});
+      m.setZIndex(1);
+    }
+  });
+  currentTop3 = top3;
+  // Upgrade top3 pins to large gold-ring
   currentTop3.forEach(r=>{
     const m=markerMap[r.place_id];
     if(m){
@@ -359,20 +381,71 @@ function buildNearbyPanel(){
       m.setZIndex(500);
     }
   });
-
-  refreshNearbyList();
-  panel.classList.add('show');
-  drawRoutes();
 }
 
 // Called when travel mode changes
 function redrawRoutes(){
-  if(currentTop3.length===0) return;
+  const mode = travelMode();
   clearOverlays();
-  // Reset route info
   currentTop3.forEach(r=>{r._routeDist=null;r._routeTime=null;});
-  refreshNearbyList();
-  drawRoutes();
+
+  if(mode === 'WALKING'){
+    // Use cached walking top 3
+    applyTop3(top3Walking);
+    refreshNearbyList();
+    drawRoutes();
+  } else {
+    // Driving: check cache first
+    if(top3Driving.length > 0){
+      applyTop3(top3Driving);
+      refreshNearbyList();
+      drawRoutes();
+    } else {
+      // Need to calculate driving durations for candidates
+      buildDrivingTop3();
+    }
+  }
+}
+
+// Find top 3 by actual driving duration (up to 15 nearest open candidates)
+function buildDrivingTop3(){
+  const candidates = allResults
+    .filter(r=>r.opening_hours&&r.opening_hours.open_now)
+    .sort((a,b)=>a._dist-b._dist)
+    .slice(0,15);
+
+  if(candidates.length === 0) return;
+
+  showToast('Beräknar bilvägar…');
+  let completed = 0;
+
+  candidates.forEach(r => {
+    r._driveDuration = null;
+    directionsService.route({
+      origin: userLatLng,
+      destination: {lat:r.geometry.location.lat(), lng:r.geometry.location.lng()},
+      travelMode: google.maps.TravelMode.DRIVING
+    }, (result, status) => {
+      if(status === google.maps.DirectionsStatus.OK){
+        const leg = result.routes[0].legs[0];
+        r._driveDuration = leg.duration.value; // seconds
+      }
+      completed++;
+      if(completed === candidates.length){
+        // Sort by drive duration, fallback to air distance if route failed
+        const sorted = candidates.slice().sort((a,b)=>{
+          const da = a._driveDuration !== null ? a._driveDuration : 999999;
+          const db = b._driveDuration !== null ? b._driveDuration : 999999;
+          return da - db;
+        });
+        top3Driving = sorted.slice(0,3);
+        top3Driving.forEach(r=>{r._routeDist=null;r._routeTime=null;});
+        applyTop3(top3Driving);
+        refreshNearbyList();
+        drawRoutes();
+      }
+    });
+  });
 }
 
 // Update just the text in nearby panel
