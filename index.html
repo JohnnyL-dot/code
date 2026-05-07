@@ -1,4 +1,4 @@
-<!-- Seated v16 -->
+<!-- Seated v17 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -95,6 +95,7 @@
         <option value="WALKING">🚶 Gång</option>
         <option value="DRIVING">🚗 Bil</option>
       </select>
+      <button id="pizza-btn" onclick="togglePizza()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border-radius:30px;cursor:pointer;white-space:nowrap;transition:all 0.2s">🍕 Ej pizza</button>
       <button id="locate-btn">📍 Min position</button>
     </div>
   </header>
@@ -143,6 +144,7 @@ let overlays = [];
 let currentTop3 = [];
 let top3Walking = [];   // cached walking top 3
 let top3Driving = [];   // cached driving top 3 (populated on first switch to DRIVING)
+let noPizza = false;  // pizza filter toggle
 
 // PWA
 let deferredPrompt = null;
@@ -176,6 +178,36 @@ function showToast(msg){
 }
 function travelMode(){
   return document.getElementById('travel-select').value;
+}
+
+// Pizza filter
+const PIZZA_KEYWORDS = /pizza|pizzeria|pizz/i;
+function isPizza(place){
+  if(PIZZA_KEYWORDS.test(place.name)) return true;
+  if(place.types && place.types.some(t=>PIZZA_KEYWORDS.test(t))) return true;
+  return false;
+}
+function togglePizza(){
+  noPizza = !noPizza;
+  const btn = document.getElementById("pizza-btn");
+  if(noPizza){
+    btn.style.background = "var(--accent)";
+    btn.style.color = "var(--bg)";
+    btn.style.borderColor = "var(--accent)";
+  } else {
+    btn.style.background = "var(--surface2)";
+    btn.style.color = "var(--muted)";
+    btn.style.borderColor = "var(--border)";
+  }
+  top3Walking = []; top3Driving = [];
+  renderMarkers();
+  if(allResults.length > 0){
+    const nearest=[...activeResults()].sort((a,b)=>a._dist-b._dist).slice(0,20);
+    enrichNext(nearest,0);
+  }
+}
+function activeResults(){
+  return noPizza ? allResults.filter(r=>!isPizza(r)) : allResults;
 }
 
 function svgPin(color,large){
@@ -327,7 +359,7 @@ function clearAll(){
 function renderMarkers(){
   clearAll();closeSheet();
   const onlyOpen=document.getElementById('status-select').value==='open';
-  const filtered=allResults.filter(r=>{
+  const filtered=activeResults().filter(r=>{
     if(onlyOpen) return r.opening_hours&&r.opening_hours.open_now;
     return true;
   });
@@ -347,7 +379,7 @@ function renderMarkers(){
 
 // Build nearby panel — called once after enriching (walking mode by default)
 function buildNearbyPanel(){
-  top3Walking = allResults
+  top3Walking = activeResults()
     .filter(r=>r.opening_hours&&r.opening_hours.open_now)
     .sort((a,b)=>a._dist-b._dist)
     .slice(0,3);
@@ -363,7 +395,7 @@ function buildNearbyPanel(){
 // Set currentTop3 and update marker styles
 function applyTop3(top3){
   // Reset all open markers to normal size
-  allResults.forEach(r=>{
+  activeResults().forEach(r=>{
     const m=markerMap[r.place_id];
     if(m){
       const isOpen=r.opening_hours?r.opening_hours.open_now:null;
@@ -409,7 +441,7 @@ function redrawRoutes(){
 
 // Find top 3 by actual driving duration — sequentially to avoid rate limits
 function buildDrivingTop3(){
-  const candidates = allResults
+  const candidates = activeResults()
     .filter(r=>r.opening_hours&&r.opening_hours.open_now)
     .sort((a,b)=>a._dist-b._dist)
     .slice(0,15);
