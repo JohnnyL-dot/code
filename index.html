@@ -1,4 +1,4 @@
-<!-- Seated v17 -->
+<!-- Seated v18 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -95,7 +95,8 @@
         <option value="WALKING">🚶 Gång</option>
         <option value="DRIVING">🚗 Bil</option>
       </select>
-      <button id="pizza-btn" onclick="togglePizza()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border-radius:30px;cursor:pointer;white-space:nowrap;transition:all 0.2s">🍕 Ej pizza</button>
+      <button id="pizza-none-btn" onclick="setPizzaFilter('none')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border-radius:30px;cursor:pointer;white-space:nowrap;transition:all 0.2s">🚫🍕 Ej pizza</button>
+      <button id="pizza-only-btn" onclick="setPizzaFilter('only')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border-radius:30px;cursor:pointer;white-space:nowrap;transition:all 0.2s">🍕 Bara pizza</button>
       <button id="locate-btn">📍 Min position</button>
     </div>
   </header>
@@ -144,7 +145,7 @@ let overlays = [];
 let currentTop3 = [];
 let top3Walking = [];   // cached walking top 3
 let top3Driving = [];   // cached driving top 3 (populated on first switch to DRIVING)
-let noPizza = false;  // pizza filter toggle
+let pizzaFilter = null; // null=alla, "none"=ej pizza, "only"=bara pizza
 
 // PWA
 let deferredPrompt = null;
@@ -187,18 +188,11 @@ function isPizza(place){
   if(place.types && place.types.some(t=>PIZZA_KEYWORDS.test(t))) return true;
   return false;
 }
-function togglePizza(){
-  noPizza = !noPizza;
-  const btn = document.getElementById("pizza-btn");
-  if(noPizza){
-    btn.style.background = "var(--accent)";
-    btn.style.color = "var(--bg)";
-    btn.style.borderColor = "var(--accent)";
-  } else {
-    btn.style.background = "var(--surface2)";
-    btn.style.color = "var(--muted)";
-    btn.style.borderColor = "var(--border)";
-  }
+function setPizzaFilter(val){
+  // val: null=alla, "none"=ej pizza, "only"=bara pizza
+  // Toggle off if already active
+  pizzaFilter = (pizzaFilter === val) ? null : val;
+  updatePizzaBtns();
   top3Walking = []; top3Driving = [];
   renderMarkers();
   if(allResults.length > 0){
@@ -206,8 +200,16 @@ function togglePizza(){
     enrichNext(nearest,0);
   }
 }
+function updatePizzaBtns(){
+  const on  = "background:var(--accent);color:var(--bg);border-color:var(--accent)";
+  const off = "background:var(--surface2);color:var(--muted);border-color:var(--border)";
+  document.getElementById("pizza-none-btn").style.cssText += ";" + (pizzaFilter==="none" ? on : off);
+  document.getElementById("pizza-only-btn").style.cssText += ";" + (pizzaFilter==="only" ? on : off);
+}
 function activeResults(){
-  return noPizza ? allResults.filter(r=>!isPizza(r)) : allResults;
+  if(pizzaFilter === "none") return allResults.filter(r=>!isPizza(r));
+  if(pizzaFilter === "only") return allResults.filter(r=>isPizza(r));
+  return allResults;
 }
 
 function svgPin(color,large){
