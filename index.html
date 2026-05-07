@@ -407,7 +407,7 @@ function redrawRoutes(){
   }
 }
 
-// Find top 3 by actual driving duration (up to 15 nearest open candidates)
+// Find top 3 by actual driving duration — sequentially to avoid rate limits
 function buildDrivingTop3(){
   const candidates = allResults
     .filter(r=>r.opening_hours&&r.opening_hours.open_now)
@@ -417,35 +417,34 @@ function buildDrivingTop3(){
   if(candidates.length === 0) return;
 
   showToast('Beräknar bilvägar…');
-  let completed = 0;
+  candidates.forEach(r=>{ r._driveDuration = null; });
 
-  candidates.forEach(r => {
-    r._driveDuration = null;
+  function fetchOne(i){
+    if(i >= candidates.length){
+      const sorted = candidates.slice().sort((a,b)=>{
+        const da = a._driveDuration !== null ? a._driveDuration : 999999;
+        const db = b._driveDuration !== null ? b._driveDuration : 999999;
+        return da - db;
+      });
+      top3Driving = sorted.slice(0,3);
+      top3Driving.forEach(r=>{ r._routeDist=null; r._routeTime=null; });
+      applyTop3(top3Driving);
+      refreshNearbyList();
+      drawRoutes();
+      return;
+    }
     directionsService.route({
       origin: userLatLng,
-      destination: {lat:r.geometry.location.lat(), lng:r.geometry.location.lng()},
+      destination: {lat:candidates[i].geometry.location.lat(), lng:candidates[i].geometry.location.lng()},
       travelMode: google.maps.TravelMode.DRIVING
     }, (result, status) => {
       if(status === google.maps.DirectionsStatus.OK){
-        const leg = result.routes[0].legs[0];
-        r._driveDuration = leg.duration.value; // seconds
+        candidates[i]._driveDuration = result.routes[0].legs[0].duration.value;
       }
-      completed++;
-      if(completed === candidates.length){
-        // Sort by drive duration, fallback to air distance if route failed
-        const sorted = candidates.slice().sort((a,b)=>{
-          const da = a._driveDuration !== null ? a._driveDuration : 999999;
-          const db = b._driveDuration !== null ? b._driveDuration : 999999;
-          return da - db;
-        });
-        top3Driving = sorted.slice(0,3);
-        top3Driving.forEach(r=>{r._routeDist=null;r._routeTime=null;});
-        applyTop3(top3Driving);
-        refreshNearbyList();
-        drawRoutes();
-      }
+      setTimeout(()=>fetchOne(i+1), 200);
     });
-  });
+  }
+  fetchOne(0);
 }
 
 // Update just the text in nearby panel
