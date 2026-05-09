@@ -1,4 +1,4 @@
-<!-- Seated v28 -->
+<!-- Seated v29 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -600,7 +600,7 @@ function openSheet(place,dist){
   const distStr=dist!==undefined?'📍 '+formatDist(dist)+' away · ':'';
   const enc=encodeURIComponent(place.name);
   const btns=PLATFORMS.map(p=>'<a class="book-btn" href="'+p.url.replace('{name}',enc)+'" target="_blank" rel="noopener"><span>'+p.emoji+'&nbsp;'+p.name+'</span><span class="arrow">→</span></a>').join('');
-  const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 Restaurangens hemsida</a>':'';
+  const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 The restaurant's website</a>':'';
   const gmapsUrl=place.url||'https://maps.google.com/?q='+enc;
   document.getElementById('sheet-content').innerHTML=
     '<div class="sheet-header"><div class="sheet-name">'+place.name+'</div><button class="sheet-close" onclick="closeSheet()">×</button></div>'+
@@ -608,7 +608,7 @@ function openSheet(place,dist){
     '<div class="status-badge '+sc+'"><div class="status-dot"></div>'+sl+'</div>'+
     '<div class="book-section"><h4>Boka via</h4><div class="book-btns">'+btns+'</div></div>'+
     websiteBtn+
-    '<a class="gmaps-btn" href="'+gmapsUrl+'" target="_blank" rel="noopener">🗺 Öppna i Google Maps</a>';
+    '<a class="gmaps-btn" href="'+gmapsUrl+'" target="_blank" rel="noopener">🗺 Directions in Google Maps</a>';
   document.getElementById('sheet').classList.add('open');
 }
 function closeSheet(){document.getElementById('sheet').classList.remove('open');}
