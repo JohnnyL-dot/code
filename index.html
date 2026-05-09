@@ -79,6 +79,10 @@
     #sheet{max-width:480px;left:50%;right:auto;width:100%;transform:translateX(-50%) translateY(100%)}
     #sheet.open{transform:translateX(-50%) translateY(0)}
   }
+  #fab-locate{position:fixed;bottom:max(env(safe-area-inset-bottom),20px);right:16px;z-index:90;width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;transition:transform 0.15s,background 0.2s}
+  #fab-locate:active{transform:scale(0.92)}
+  #fab-locate.locating{background:#f4c97a;animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 4px 16px rgba(0,0,0,0.5)}50%{box-shadow:0 4px 24px rgba(245,201,122,0.6)}}
 </style>
 </head>
 <body>
@@ -96,7 +100,6 @@
         <option value="DRIVING">🚗 Bil</option>
       </select>
 
-      <button id="locate-btn">📍 Min position</button>
     </div>
   </header>
   <div class="filters">
@@ -129,6 +132,7 @@
   <button class="install-dismiss" id="install-dismiss">×</button>
 </div>
 <div id="toast"></div>
+<button id="fab-locate" title="Min position">📍</button>
 
 <script>
 const API_KEY = 'AIzaSyAYIGLRT3QZW6mg80I9E8cESMw-mtMH79s';
@@ -263,8 +267,10 @@ function onMapsReady(){
 }
 
 // Geolocation
-document.getElementById('locate-btn').addEventListener('click', startLocate);
+document.getElementById('fab-locate').addEventListener('click', startLocate);
 function startLocate(){
+  const fab=document.getElementById('fab-locate');
+  fab.classList.add('locating');
   document.getElementById('loading').classList.remove('hide');
   setMsg('Hämtar din position…');
   if(!navigator.geolocation){
@@ -275,11 +281,14 @@ function startLocate(){
   }
   navigator.geolocation.getCurrentPosition(
     pos=>{
+      document.getElementById('fab-locate').classList.remove('locating');
+      document.getElementById('fab-locate').textContent='🔄';
       userLatLng={lat:pos.coords.latitude,lng:pos.coords.longitude};
       map.setCenter(userLatLng);map.setZoom(15);
       placeUserPin();searchNearby();
     },
     err=>{
+      document.getElementById('fab-locate').classList.remove('locating');
       document.getElementById('loading').classList.add('hide');
       if(err.code===1){
         showToast('Platstillstånd nekades — tillåt i inställningar');
