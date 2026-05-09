@@ -1,6 +1,6 @@
-<!-- Seated v22 -->
+<!-- Seated v23 -->
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -89,15 +89,15 @@
 <div id="loading">
   <div class="spinner"></div>
   <div class="loading-text">Seated</div>
-  <div id="loading-msg">Laddar karta…</div>
+  <div id="loading-msg">Loading map…</div>
 </div>
 <div id="app">
   <header>
     <div class="logo">Seat<span>ed</span></div>
     <div style="display:flex;gap:8px;align-items:center">
       <select id="travel-select" onchange="redrawRoutes()" style="background:var(--surface2);border:1px solid var(--border);border-radius:30px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;cursor:pointer;appearance:none;">
-        <option value="WALKING">🚶 Gång</option>
-        <option value="DRIVING">🚗 Bil</option>
+        <option value="WALKING">🚶 Walk</option>
+        <option value="DRIVING">🚗 Drive</option>
       </select>
 
     </div>
@@ -105,20 +105,20 @@
   <div class="filters">
     <div class="filter-pill">
       <select id="status-select" onchange="renderMarkers()">
-        <option value="all">Alla restauranger</option>
-        <option value="open">Öppna nu</option>
+        <option value="all">All restaurants</option>
+        <option value="open">Open now</option>
       </select>
     </div>
-    <div class="filter-pill" id="pizza-none-btn" style="cursor:pointer" onclick="setPizzaFilter('none')">🚫🍕 Ej pizza</div>
+    <div class="filter-pill" id="pizza-none-btn" style="cursor:pointer" onclick="setPizzaFilter('none')">🚫🍕 No pizza</div>
     <div class="filter-pill" style="cursor:pointer" onclick="clearCache()">
-      🔄 Uppdatera app
+      🔄 Refresh app
     </div>
   </div>
   <div id="map"><div id="gmap"></div></div>
-  <div id="status-bar">Tryck på "Min position" för att söka</div>
+  <div id="status-bar">Tap 📍 to find restaurants near you</div>
 </div>
 <div id="nearby-panel">
-  <div class="nearby-title">⭐ Närmaste öppna</div>
+  <div class="nearby-title">⭐ Nearest open</div>
   <div id="nearby-list"></div>
 </div>
 <div id="sheet">
@@ -126,12 +126,12 @@
   <div class="sheet-content" id="sheet-content"></div>
 </div>
 <div id="install-banner">
-  <div class="install-text"><strong>Lägg till på hemskärmen</strong>Använd Seated som en riktig app</div>
-  <button class="install-btn" id="install-btn">Installera</button>
+  <div class="install-text"><strong>Add to Home Screen</strong>Use Seated as a native app</div>
+  <button class="install-btn" id="install-btn">Install</button>
   <button class="install-dismiss" id="install-dismiss">×</button>
 </div>
 <div id="toast"></div>
-<button id="fab-locate" title="Min position">📍</button>
+<button id="fab-locate" title="My location">📍</button>
 
 <script>
 const API_KEY = 'AIzaSyAYIGLRT3QZW6mg80I9E8cESMw-mtMH79s';
@@ -149,7 +149,7 @@ let overlays = [];
 let currentTop3 = [];
 let top3Walking = [];   // cached walking top 3
 let top3Driving = [];   // cached driving top 3 (populated on first switch to DRIVING)
-let pizzaFilter = null; // null=alla, "none"=ej pizza, "only"=bara pizza
+let pizzaFilter = null; // null=all, "none"=no pizza, "only"=only pizza
 
 // PWA
 let deferredPrompt = null;
@@ -256,7 +256,7 @@ function onMapsReady(){
   directionsService = new google.maps.DirectionsService();
   map.addListener('click', closeSheet);
   document.getElementById('loading').classList.add('hide');
-  setStatus('Tryck på "Min position" för att söka');
+  setStatus('Tap 📍 to find restaurants near you');
 }
 
 // Geolocation
@@ -265,7 +265,7 @@ function startLocate(){
   const fab=document.getElementById('fab-locate');
   fab.classList.add('locating');
   document.getElementById('loading').classList.remove('hide');
-  setMsg('Hämtar din position…');
+  setMsg('Getting your location…');
   if(!navigator.geolocation){
     document.getElementById('loading').classList.add('hide');
     showToast('Din enhet stöder inte GPS');
@@ -284,14 +284,14 @@ function startLocate(){
       document.getElementById('fab-locate').classList.remove('locating');
       document.getElementById('loading').classList.add('hide');
       if(err.code===1){
-        showToast('Platstillstånd nekades — tillåt i inställningar');
-        setStatus('⚠️ Tillåt platsåtkomst och tryck "Min position" igen');
+        showToast('Location permission denied — allow in settings');
+        setStatus('⚠️ Allow location access and tap 📍 again');
       } else if(err.code===2){
-        showToast('Kunde inte hämta position — försök igen');
-        setStatus('⚠️ Position ej tillgänglig — försök igen');
+        showToast('Could not get location — try again');
+        setStatus('⚠️ Location unavailable — try again');
       } else {
-        showToast('Tidsgräns — försök igen');
-        setStatus('⚠️ Positionssökning tog för lång tid — försök igen');
+        showToast('Timed out — try again');
+        setStatus('⚠️ Location search timed out — try again');
       }
     },
     {timeout:10000, enableHighAccuracy:true}
@@ -301,14 +301,14 @@ function placeUserPin(){
   new google.maps.Marker({
     position:userLatLng,map,
     icon:{path:google.maps.SymbolPath.CIRCLE,scale:9,fillColor:'#5b9cf6',fillOpacity:1,strokeColor:'#fff',strokeWeight:2.5},
-    title:'Du är här',zIndex:999
+    title:'You are here',zIndex:999
   });
 }
 
 // Search
 function searchNearby(){
   allResults=[];clearAll();
-  setMsg('Söker restauranger…');
+  setMsg('Searching for restaurants…');
   placesService.nearbySearch({
     location:new google.maps.LatLng(userLatLng.lat,userLatLng.lng),
     radius:5000,type:'restaurant'
@@ -317,7 +317,7 @@ function searchNearby(){
 function onSearchResults(results,status,pagination){
   if(status!==google.maps.places.PlacesServiceStatus.OK){
     document.getElementById('loading').classList.add('hide');
-    setStatus('Inga restauranger hittades.');return;
+    setStatus('No restaurants found.');return;
   }
   results.forEach(r=>{
     r._dist=haversine(userLatLng.lat,userLatLng.lng,r.geometry.location.lat(),r.geometry.location.lng());
@@ -384,7 +384,7 @@ function renderMarkers(){
     markerMap[place.place_id]=m;
   });
   const openCount=filtered.filter(r=>r.opening_hours&&r.opening_hours.open_now).length;
-  setStatus(`${filtered.length} restauranger hittade · ${openCount} öppna nu`);
+  setStatus(`${filtered.length} restaurants found · ${openCount} open now`);
 }
 
 // Build nearby panel — called once after enriching (walking mode by default)
@@ -458,7 +458,7 @@ function buildDrivingTop3(){
 
   if(candidates.length === 0) return;
 
-  showToast('Beräknar bilvägar…');
+  showToast('Calculating driving routes…');
   candidates.forEach(r=>{ r._driveDuration = null; });
 
   function fetchOne(i){
@@ -498,7 +498,7 @@ function refreshNearbyList(){
       <div class="nearby-dot"></div>
       <div class="nearby-info">
         <div class="nearby-name">${r.name}</div>
-        <div class="nearby-dist">${r._routeDist ? icon+' '+r._routeDist+' · '+r._routeTime : formatDist(r._dist)+' bort'}</div>
+        <div class="nearby-dist">${r._routeDist ? icon+' '+r._routeDist+' · '+r._routeTime : formatDist(r._dist)+' away'}</div>
       </div>
     </div>`).join('');
 }
@@ -578,10 +578,10 @@ function fetchDetails(placeId,dist){
 function openSheet(place,dist){
   const isOpen=place.opening_hours?place.opening_hours.open_now:null;
   const sc=isOpen===true?'open':isOpen===false?'closed':'unknown';
-  const sl=isOpen===true?'Öppen nu':isOpen===false?'Stängd just nu':'Okänd öppettid';
+  const sl=isOpen===true?'Open now':isOpen===false?'Closed':'Unknown hours';
   const rating=place.rating?'<span class="sheet-rating">★ '+place.rating+'</span> ('+( place.user_ratings_total||'?')+') · ':'';
   const price=place.price_level?'💰'.repeat(place.price_level)+' · ':'';
-  const distStr=dist!==undefined?'📍 '+formatDist(dist)+' bort · ':'';
+  const distStr=dist!==undefined?'📍 '+formatDist(dist)+' away · ':'';
   const enc=encodeURIComponent(place.name);
   const btns=PLATFORMS.map(p=>'<a class="book-btn" href="'+p.url.replace('{name}',enc)+'" target="_blank" rel="noopener"><span>'+p.emoji+'&nbsp;'+p.name+'</span><span class="arrow">→</span></a>').join('');
   const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 Restaurangens hemsida</a>':'';
@@ -605,7 +605,7 @@ sheet.addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-ty>60)close
 function clearCache(){
   if('serviceWorker' in navigator && 'caches' in window){
     caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>{
-      showToast('Cache rensad — laddar om…');
+      showToast('Cache cleared — reloading…');
       setTimeout(()=>window.location.reload(true),1000);
     });
   } else {
