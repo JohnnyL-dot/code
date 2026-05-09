@@ -1,4 +1,4 @@
-<!-- Seated v29 -->
+<!-- Seated v30 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -600,7 +600,7 @@ function openSheet(place,dist){
   const distStr=dist!==undefined?'📍 '+formatDist(dist)+' away · ':'';
   const enc=encodeURIComponent(place.name);
   const btns=PLATFORMS.map(p=>'<a class="book-btn" href="'+p.url.replace('{name}',enc)+'" target="_blank" rel="noopener"><span>'+p.emoji+'&nbsp;'+p.name+'</span><span class="arrow">→</span></a>').join('');
-  const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 The restaurant's website</a>':'';
+  const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 The restaurant&apos;s website</a>':'';
   const gmapsUrl=place.url||'https://maps.google.com/?q='+enc;
   document.getElementById('sheet-content').innerHTML=
     '<div class="sheet-header"><div class="sheet-name">'+place.name+'</div><button class="sheet-close" onclick="closeSheet()">×</button></div>'+
