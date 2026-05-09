@@ -1,4 +1,4 @@
-<!-- Seated v20 -->
+<!-- Seated v21 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -570,7 +570,7 @@ function drawOneRoute(i){
 // Details & sheet
 function fetchDetails(placeId,dist){
   placesService.getDetails({
-    placeId,fields:['name','rating','user_ratings_total','formatted_address','opening_hours','url','price_level']
+    placeId,fields:['name','rating','user_ratings_total','formatted_address','opening_hours','url','price_level','website']
   },(place,status)=>{
     if(status===google.maps.places.PlacesServiceStatus.OK) openSheet(place,dist);
   });
@@ -592,6 +592,7 @@ function openSheet(place,dist){
     <div class="sheet-meta">${distStr}${rating}${price}${place.formatted_address||''}</div>
     <div class="status-badge ${sc}"><div class="status-dot"></div>${sl}</div>
     <div class="book-section"><h4>Boka via</h4><div class="book-btns">${btns}</div></div>
+    ${place.website ? `<a class="gmaps-btn" href="${place.website}" target="_blank" rel="noopener">🌐 Restaurangens hemsida</a>` : ''}
     <a class="gmaps-btn" href="${place.url||'https://maps.google.com/?q='+enc}" target="_blank" rel="noopener">🗺 Öppna i Google Maps</a>`;
   document.getElementById('sheet').classList.add('open');
 }
