@@ -1,4 +1,4 @@
-<!-- Seated v18 -->
+<!-- Seated v19 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -22,8 +22,8 @@
   .logo{font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent);letter-spacing:-0.5px}
   .logo span{color:var(--text)}
   #locate-btn{background:var(--accent);border:none;color:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:8px 14px;border-radius:30px;cursor:pointer;white-space:nowrap}
-  .filters{padding:10px 16px;display:flex;gap:8px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
-  .filter-pill{display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:30px;padding:6px 14px;font-size:13px;color:var(--text)}
+  .filters{padding:10px 16px;display:flex;gap:8px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}
+  .filter-pill{display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:30px;padding:6px 14px;font-size:13px;color:var(--text);white-space:nowrap;flex-shrink:0}
   .filter-pill select{background:none;border:none;color:var(--text);font-family:inherit;font-size:13px;outline:none;cursor:pointer;appearance:none}
   #map{flex:1;min-height:0}
   #gmap{width:100%;height:100%}
@@ -95,8 +95,7 @@
         <option value="WALKING">🚶 Gång</option>
         <option value="DRIVING">🚗 Bil</option>
       </select>
-      <button id="pizza-none-btn" onclick="setPizzaFilter('none')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border-radius:30px;cursor:pointer;white-space:nowrap;transition:all 0.2s">🚫🍕 Ej pizza</button>
-      <button id="pizza-only-btn" onclick="setPizzaFilter('only')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border-radius:30px;cursor:pointer;white-space:nowrap;transition:all 0.2s">🍕 Bara pizza</button>
+
       <button id="locate-btn">📍 Min position</button>
     </div>
   </header>
@@ -107,6 +106,8 @@
         <option value="open">Öppna nu</option>
       </select>
     </div>
+    <div class="filter-pill" id="pizza-none-btn" style="cursor:pointer" onclick="setPizzaFilter('none')">🚫🍕 Ej pizza</div>
+    <div class="filter-pill" id="pizza-only-btn" style="cursor:pointer" onclick="setPizzaFilter('only')">🍕 Bara pizza</div>
     <div class="filter-pill" style="cursor:pointer" onclick="clearCache()">
       🔄 Uppdatera app
     </div>
@@ -201,10 +202,15 @@ function setPizzaFilter(val){
   }
 }
 function updatePizzaBtns(){
-  const on  = "background:var(--accent);color:var(--bg);border-color:var(--accent)";
-  const off = "background:var(--surface2);color:var(--muted);border-color:var(--border)";
-  document.getElementById("pizza-none-btn").style.cssText += ";" + (pizzaFilter==="none" ? on : off);
-  document.getElementById("pizza-only-btn").style.cssText += ";" + (pizzaFilter==="only" ? on : off);
+  const noneBtn = document.getElementById("pizza-none-btn");
+  const onlyBtn = document.getElementById("pizza-only-btn");
+  [noneBtn, onlyBtn].forEach(btn => {
+    btn.style.background = "var(--surface2)";
+    btn.style.color = "var(--text)";
+    btn.style.borderColor = "var(--border)";
+  });
+  if(pizzaFilter === "none"){ noneBtn.style.background="var(--accent)"; noneBtn.style.color="var(--bg)"; noneBtn.style.borderColor="var(--accent)"; }
+  if(pizzaFilter === "only"){ onlyBtn.style.background="var(--accent)"; onlyBtn.style.color="var(--bg)"; onlyBtn.style.borderColor="var(--accent)"; }
 }
 function activeResults(){
   if(pizzaFilter === "none") return allResults.filter(r=>!isPizza(r));
