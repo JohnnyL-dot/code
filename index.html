@@ -110,7 +110,6 @@
       </select>
     </div>
     <div class="filter-pill" id="pizza-none-btn" style="cursor:pointer" onclick="setPizzaFilter('none')">🚫🍕 Ej pizza</div>
-    <div class="filter-pill" id="pizza-only-btn" style="cursor:pointer" onclick="setPizzaFilter('only')">🍕 Bara pizza</div>
     <div class="filter-pill" style="cursor:pointer" onclick="clearCache()">
       🔄 Uppdatera app
     </div>
@@ -207,18 +206,12 @@ function setPizzaFilter(val){
 }
 function updatePizzaBtns(){
   const noneBtn = document.getElementById("pizza-none-btn");
-  const onlyBtn = document.getElementById("pizza-only-btn");
-  [noneBtn, onlyBtn].forEach(btn => {
-    btn.style.background = "var(--surface2)";
-    btn.style.color = "var(--text)";
-    btn.style.borderColor = "var(--border)";
-  });
-  if(pizzaFilter === "none"){ noneBtn.style.background="var(--accent)"; noneBtn.style.color="var(--bg)"; noneBtn.style.borderColor="var(--accent)"; }
-  if(pizzaFilter === "only"){ onlyBtn.style.background="var(--accent)"; onlyBtn.style.color="var(--bg)"; onlyBtn.style.borderColor="var(--accent)"; }
+  noneBtn.style.background = pizzaFilter==="none" ? "var(--accent)" : "var(--surface2)";
+  noneBtn.style.color      = pizzaFilter==="none" ? "var(--bg)"     : "var(--text)";
+  noneBtn.style.borderColor= pizzaFilter==="none" ? "var(--accent)" : "var(--border)";
 }
 function activeResults(){
   if(pizzaFilter === "none") return allResults.filter(r=>!isPizza(r));
-  if(pizzaFilter === "only") return allResults.filter(r=>isPizza(r));
   return allResults;
 }
 
