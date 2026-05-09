@@ -1,4 +1,4 @@
-<!-- Seated v26 -->
+<!-- Seated v27 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,13 +100,12 @@
 </div>
 <div id="app">
   <header>
-    <div class="logo">Seat<span>ed</span></div>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="logo">Seat<span>ed</span></div>
       <select id="travel-select" onchange="redrawRoutes()" style="background:var(--surface2);border:1px solid var(--border);border-radius:30px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;cursor:pointer;appearance:none;">
         <option value="WALKING">🚶 Walk</option>
         <option value="DRIVING">🚗 Drive</option>
       </select>
-
     </div>
   </header>
   <div class="filters">
@@ -601,7 +600,7 @@ function openSheet(place,dist){
   const distStr=dist!==undefined?'📍 '+formatDist(dist)+' away · ':'';
   const enc=encodeURIComponent(place.name);
   const btns=PLATFORMS.map(p=>'<a class="book-btn" href="'+p.url.replace('{name}',enc)+'" target="_blank" rel="noopener"><span>'+p.emoji+'&nbsp;'+p.name+'</span><span class="arrow">→</span></a>').join('');
-  const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 The restaurant’s website</a>':'';
+  const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 Restaurangens hemsida</a>':'';
   const gmapsUrl=place.url||'https://maps.google.com/?q='+enc;
   document.getElementById('sheet-content').innerHTML=
     '<div class="sheet-header"><div class="sheet-name">'+place.name+'</div><button class="sheet-close" onclick="closeSheet()">×</button></div>'+
@@ -609,7 +608,7 @@ function openSheet(place,dist){
     '<div class="status-badge '+sc+'"><div class="status-dot"></div>'+sl+'</div>'+
     '<div class="book-section"><h4>Boka via</h4><div class="book-btns">'+btns+'</div></div>'+
     websiteBtn+
-    '<a class="gmaps-btn" href="'+gmapsUrl+'" target="_blank" rel="noopener">🗺 Directions in Google Maps</a>';
+    '<a class="gmaps-btn" href="'+gmapsUrl+'" target="_blank" rel="noopener">🗺 Öppna i Google Maps</a>';
   document.getElementById('sheet').classList.add('open');
 }
 function closeSheet(){document.getElementById('sheet').classList.remove('open');}
