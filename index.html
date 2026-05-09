@@ -1,4 +1,4 @@
-<!-- Seated v24 -->
+<!-- Seated v25 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -644,18 +644,21 @@ function toggleTopRated(){
 }
 
 function buildTopRatedList(){
-  const active = activeResults().filter(r => r.opening_hours && r.opening_hours.open_now && r.rating >= 3);
-  const top = active.sort((a,b) => (b.rating||0)-(a.rating||0)).slice(0,3);
+  // Filter: has a rating, rating >= 3, respects pizza filter
+  // Does NOT require opening_hours to be known — nearbySearch returns rating reliably
+  const active = activeResults().filter(r => r.rating && r.rating >= 3);
+  const top = active.sort((a,b) => (b.rating||0)-(a.rating||0) || a._dist-b._dist).slice(0,3);
   if(top.length === 0){
-    document.getElementById('top-rated-list').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No results</div>';
+    document.getElementById('top-rated-list').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No rated results found</div>';
     return;
   }
+  const isOpen = r => r.opening_hours ? (r.opening_hours.open_now ? ' · <span style="color:#7ecb89">Open</span>' : ' · <span style="color:#f07878">Closed</span>') : '';
   document.getElementById('top-rated-list').innerHTML = top.map(r =>
     '<div class="nearby-item" onclick="fetchDetails(''+r.place_id+'','+r._dist+')">' +
     '<div class="nearby-dot" style="background:#f4c97a"></div>' +
     '<div class="nearby-info">' +
     '<div class="nearby-name">'+r.name+'</div>' +
-    '<div class="nearby-dist"><span class="nearby-rating">★ '+(r.rating||'?')+'</span> · '+formatDist(r._dist)+' away</div>' +
+    '<div class="nearby-dist"><span class="nearby-rating">★ '+r.rating+'</span> · '+formatDist(r._dist)+' away'+isOpen(r)+'</div>' +
     '</div></div>'
   ).join('');
 }
