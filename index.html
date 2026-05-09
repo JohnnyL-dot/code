@@ -1,4 +1,4 @@
-<!-- Seated v23 -->
+<!-- Seated v24 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -83,6 +83,13 @@
   #fab-locate:active{transform:scale(0.92)}
   #fab-locate.locating{background:#f4c97a;animation:pulse 1s ease-in-out infinite}
   @keyframes pulse{0%,100%{box-shadow:0 4px 16px rgba(0,0,0,0.5)}50%{box-shadow:0 4px 24px rgba(245,201,122,0.6)}}
+  #top-rated-section{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;display:none}
+  #top-rated-section.show{display:block}
+  #top-rated-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;cursor:pointer;padding:2px 0;margin-top:6px;border-top:1px solid var(--border);padding-top:6px}
+  #top-rated-toggle .tr-label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)}
+  #top-rated-toggle .tr-arrow{font-size:10px;color:var(--muted);transition:transform 0.2s}
+  #top-rated-toggle.open .tr-arrow{transform:rotate(180deg)}
+  .nearby-rating{font-size:10px;color:#f4c97a}
 </style>
 </head>
 <body>
@@ -120,6 +127,13 @@
 <div id="nearby-panel">
   <div class="nearby-title">⭐ Nearest open</div>
   <div id="nearby-list"></div>
+  <button id="top-rated-toggle" onclick="toggleTopRated()">
+    <span class="tr-label">★★★ Top rated nearby</span>
+    <span class="tr-arrow">▾</span>
+  </button>
+  <div id="top-rated-section">
+    <div id="top-rated-list"></div>
+  </div>
 </div>
 <div id="sheet">
   <div class="sheet-handle"></div>
@@ -363,6 +377,9 @@ function clearAll(){
   top3Walking=[];
   top3Driving=[];
   document.getElementById('nearby-panel').classList.remove('show');
+  showTopRated=false;
+  const trtog=document.getElementById('top-rated-toggle');if(trtog)trtog.classList.remove('open');
+  const trsec=document.getElementById('top-rated-section');if(trsec)trsec.classList.remove('show');
 }
 
 // Render all restaurant markers
@@ -611,6 +628,36 @@ function clearCache(){
   } else {
     window.location.reload(true);
   }
+}
+
+
+// Top rated panel
+let showTopRated = false;
+
+function toggleTopRated(){
+  showTopRated = !showTopRated;
+  const btn = document.getElementById('top-rated-toggle');
+  const section = document.getElementById('top-rated-section');
+  btn.classList.toggle('open', showTopRated);
+  section.classList.toggle('show', showTopRated);
+  if(showTopRated) buildTopRatedList();
+}
+
+function buildTopRatedList(){
+  const active = activeResults().filter(r => r.opening_hours && r.opening_hours.open_now && r.rating >= 3);
+  const top = active.sort((a,b) => (b.rating||0)-(a.rating||0)).slice(0,3);
+  if(top.length === 0){
+    document.getElementById('top-rated-list').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No results</div>';
+    return;
+  }
+  document.getElementById('top-rated-list').innerHTML = top.map(r =>
+    '<div class="nearby-item" onclick="fetchDetails(''+r.place_id+'','+r._dist+')">' +
+    '<div class="nearby-dot" style="background:#f4c97a"></div>' +
+    '<div class="nearby-info">' +
+    '<div class="nearby-name">'+r.name+'</div>' +
+    '<div class="nearby-dist"><span class="nearby-rating">★ '+(r.rating||'?')+'</span> · '+formatDist(r._dist)+' away</div>' +
+    '</div></div>'
+  ).join('');
 }
 
 loadGoogleMaps();
