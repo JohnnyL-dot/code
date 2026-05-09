@@ -1,4 +1,4 @@
-<!-- Seated v21 -->
+<!-- Seated v22 -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -579,21 +579,20 @@ function openSheet(place,dist){
   const isOpen=place.opening_hours?place.opening_hours.open_now:null;
   const sc=isOpen===true?'open':isOpen===false?'closed':'unknown';
   const sl=isOpen===true?'Öppen nu':isOpen===false?'Stängd just nu':'Okänd öppettid';
-  const rating=place.rating?`<span class="sheet-rating">★ ${place.rating}</span> (${place.user_ratings_total||'?'}) · `:'';
+  const rating=place.rating?'<span class="sheet-rating">★ '+place.rating+'</span> ('+( place.user_ratings_total||'?')+') · ':'';
   const price=place.price_level?'💰'.repeat(place.price_level)+' · ':'';
-  const distStr=dist!==undefined?`📍 ${formatDist(dist)} bort · `:'';
+  const distStr=dist!==undefined?'📍 '+formatDist(dist)+' bort · ':'';
   const enc=encodeURIComponent(place.name);
-  const btns=PLATFORMS.map(p=>`<a class="book-btn" href="${p.url.replace('{name}',enc)}" target="_blank" rel="noopener"><span>${p.emoji}&nbsp;${p.name}</span><span class="arrow">→</span></a>`).join('');
-  document.getElementById('sheet-content').innerHTML=`
-    <div class="sheet-header">
-      <div class="sheet-name">${place.name}</div>
-      <button class="sheet-close" onclick="closeSheet()">×</button>
-    </div>
-    <div class="sheet-meta">${distStr}${rating}${price}${place.formatted_address||''}</div>
-    <div class="status-badge ${sc}"><div class="status-dot"></div>${sl}</div>
-    <div class="book-section"><h4>Boka via</h4><div class="book-btns">${btns}</div></div>
-    ${place.website ? `<a class="gmaps-btn" href="${place.website}" target="_blank" rel="noopener">🌐 Restaurangens hemsida</a>` : ''}
-    <a class="gmaps-btn" href="${place.url||'https://maps.google.com/?q='+enc}" target="_blank" rel="noopener">🗺 Öppna i Google Maps</a>`;
+  const btns=PLATFORMS.map(p=>'<a class="book-btn" href="'+p.url.replace('{name}',enc)+'" target="_blank" rel="noopener"><span>'+p.emoji+'&nbsp;'+p.name+'</span><span class="arrow">→</span></a>').join('');
+  const websiteBtn=place.website?'<a class="gmaps-btn" href="'+place.website+'" target="_blank" rel="noopener">🌐 Restaurangens hemsida</a>':'';
+  const gmapsUrl=place.url||'https://maps.google.com/?q='+enc;
+  document.getElementById('sheet-content').innerHTML=
+    '<div class="sheet-header"><div class="sheet-name">'+place.name+'</div><button class="sheet-close" onclick="closeSheet()">×</button></div>'+
+    '<div class="sheet-meta">'+distStr+rating+price+(place.formatted_address||'')+'</div>'+
+    '<div class="status-badge '+sc+'"><div class="status-dot"></div>'+sl+'</div>'+
+    '<div class="book-section"><h4>Boka via</h4><div class="book-btns">'+btns+'</div></div>'+
+    websiteBtn+
+    '<a class="gmaps-btn" href="'+gmapsUrl+'" target="_blank" rel="noopener">🗺 Öppna i Google Maps</a>';
   document.getElementById('sheet').classList.add('open');
 }
 function closeSheet(){document.getElementById('sheet').classList.remove('open');}
