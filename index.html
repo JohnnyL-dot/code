@@ -1,4 +1,4 @@
-<!-- Seated v32 -->
+<!-- Seated v33 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -269,6 +269,7 @@ function onMapsReady(){
   map.addListener('click', closeSheet);
   document.getElementById('loading').classList.add('hide');
   setStatus('Tap 📍 to find restaurants near you');
+  startLocate();
 }
 
 // Geolocation
@@ -640,8 +641,6 @@ function buildTopRatedList(){
 }
 
 loadGoogleMaps();
-// Auto-locate on startup
-window.addEventListener("load", () => setTimeout(startLocate, 800));
 </script>
 </body>
 </html>
